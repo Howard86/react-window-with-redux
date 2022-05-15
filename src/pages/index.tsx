@@ -1,29 +1,24 @@
 import { useCallback, useMemo } from 'react';
 
 import { Box, CircularProgress, Container } from '@chakra-ui/react';
-import dayjs from 'dayjs';
 import Head from 'next/head';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { FixedSizeList } from 'react-window';
 import InfiniteLoader from 'react-window-infinite-loader';
 
 import BodyRow from '@/components/BodyRow';
+import DateCell from '@/components/DateCell';
 import HeaderRow from '@/components/HeaderRow';
 import { Column, ColumnContext } from '@/contexts/column';
-import { MAX_API_RETURN_COUNT, selectDrivers } from '@/redux/driver';
+import { MAX_API_RETURN_COUNT, selectDriverIds } from '@/redux/driver';
 import { useAppSelector } from '@/redux/store';
-import { Driver } from '@/services/driver';
 import { useLazyGetDriversQuery } from '@/services/local';
 
 const MAX = 1000;
 const VISIBLE_ROW_COUNT = 5;
 
-const DateCell = ({ deliveryTime }: Driver) => (
-  <>{dayjs(deliveryTime).format('HH:mm')}</>
-);
-
 const Home = (): JSX.Element => {
-  const drivers = useAppSelector(selectDrivers);
+  const driversIds = useAppSelector(selectDriverIds);
   const [refetch, { isFetching }] = useLazyGetDriversQuery();
 
   const columns = useMemo<Column[]>(
@@ -42,21 +37,21 @@ const Home = (): JSX.Element => {
   );
 
   const isItemLoaded = useCallback(
-    (index: number) => index <= drivers.length,
-    [drivers.length],
+    (index: number) => index <= driversIds.length,
+    [driversIds.length],
   );
 
   const loadMoreItems = useCallback(
     async (_startIndex: number, endIndex: number) => {
       if (
-        drivers.length >= MAX ||
-        drivers.length - endIndex >= VISIBLE_ROW_COUNT
+        driversIds.length >= MAX ||
+        driversIds.length - endIndex >= VISIBLE_ROW_COUNT
       )
         return;
 
-      refetch(Math.min(MAX_API_RETURN_COUNT, MAX - drivers.length));
+      refetch(Math.min(MAX_API_RETURN_COUNT, MAX - driversIds.length));
     },
-    [drivers.length, refetch],
+    [driversIds.length, refetch],
   );
 
   return (
@@ -87,9 +82,9 @@ const Home = (): JSX.Element => {
                       ref={ref}
                       height={height}
                       width={width}
-                      itemCount={drivers.length}
+                      itemCount={driversIds.length}
                       itemSize={40}
-                      itemData={drivers}
+                      itemData={driversIds}
                       onItemsRendered={onItemsRendered}
                     >
                       {BodyRow}

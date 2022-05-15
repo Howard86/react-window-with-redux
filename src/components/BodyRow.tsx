@@ -1,24 +1,28 @@
 import { CSSProperties, memo } from 'react';
 
 import { Flex } from '@chakra-ui/react';
+import { EntityId } from '@reduxjs/toolkit';
 import { areEqual } from 'react-window';
 
 import FlexLayoutCell from './FlexLayoutCell';
 
 import { useColumns } from '@/contexts/column';
-import { Driver } from '@/services/driver';
+import { selectDriverEntities } from '@/redux/driver';
+import { useAppSelector } from '@/redux/store';
 
 interface BodyRowProps {
-  data: Driver[];
+  data: EntityId[];
   index: number;
   style: CSSProperties;
 }
 
 const BodyRow = ({ data, index, style }: BodyRowProps) => {
   const columns = useColumns();
-  const item = data[index];
+  const item = useAppSelector(selectDriverEntities)[data[index]];
 
-  return item ? (
+  if (!item) return null;
+
+  return (
     <Flex style={style}>
       <FlexLayoutCell flexWidth={10}>{index}</FlexLayoutCell>
       {columns.map(({ accessor, flexWidth, Cell }) => (
@@ -27,7 +31,7 @@ const BodyRow = ({ data, index, style }: BodyRowProps) => {
         </FlexLayoutCell>
       ))}
     </Flex>
-  ) : null;
+  );
 };
 
 export default memo(BodyRow, areEqual);

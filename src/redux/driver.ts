@@ -45,3 +45,9 @@ export const driverSlice = createSlice({
 
 export const selectDrivers = (state: RootState) =>
   driverSelector.selectAll(state.driver.entity);
+
+export const selectDriverIds = (state: RootState) =>
+  driverSelector.selectIds(state.driver.entity);
+
+export const selectDriverEntities = (state: RootState) =>
+  driverSelector.selectEntities(state.driver.entity);
