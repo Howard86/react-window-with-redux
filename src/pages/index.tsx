@@ -1,20 +1,38 @@
-import {
-  Box,
-  Container,
-  Heading,
-  Link,
-  SimpleGrid,
-  Skeleton,
-  Text,
-} from '@chakra-ui/react';
-import Head from 'next/head';
+import { useCallback, useState } from 'react';
 
-import Image from '@/components/Image';
-import RouteLink from '@/components/RouteLink';
-import { useGetNameQuery } from '@/services/local';
+import { Box, Container, Flex } from '@chakra-ui/react';
+import Head from 'next/head';
+import AutoSizer from 'react-virtualized-auto-sizer';
+import { FixedSizeList } from 'react-window';
+import InfiniteLoader from 'react-window-infinite-loader';
+
+import FlexLayoutCell from '@/components/FlexLayoutCell';
+import Row from '@/components/Row';
+import { generateData } from '@/services/generator';
+
+const MAX = 1000;
+const VISIBLE_ROW_COUNT = 5;
 
 const Home = (): JSX.Element => {
-  const { data, isSuccess, fulfilledTimeStamp } = useGetNameQuery();
+  const [items, setItems] = useState(() => generateData(30));
+
+  const isItemLoaded = useCallback(
+    (index: number) => index <= items.length,
+    [items.length],
+  );
+
+  const loadMoreItems = useCallback(
+    async (_startIndex: number, endIndex: number) => {
+      if (items.length >= MAX || items.length - endIndex >= VISIBLE_ROW_COUNT)
+        return;
+
+      setItems((state) => [
+        ...state,
+        ...generateData(Math.min(30, MAX - items.length)),
+      ]);
+    },
+    [items.length],
+  );
 
   return (
     <>
@@ -28,95 +46,35 @@ const Home = (): JSX.Element => {
         h="full"
         maxWidth="container.lg"
       >
-        <Box
-          as="main"
-          py="8"
-          display="flex"
-          flexDir="column"
-          alignItems="center"
-          flex={1}
-        >
-          <Heading as="h1">
-            Welcome to{' '}
-            <Link href="https://nextjs.org" isExternal>
-              Next.js!
-            </Link>
-          </Heading>
-          <Text fontWeight="semibold" fontSize="lg">
-            Go to <RouteLink href="/new-page">New Page</RouteLink>
-          </Text>
-
-          <Skeleton isLoaded={isSuccess}>
-            {data && fulfilledTimeStamp && (
-              <Text>
-                Local API <Text as="code">/hello</Text> processed within{' '}
-                {fulfilledTimeStamp - data.timestamp}ms
-              </Text>
+        <Flex py="2">
+          <FlexLayoutCell flexWidth={10}>#</FlexLayoutCell>
+          <FlexLayoutCell flexWidth={20}>Name</FlexLayoutCell>
+          <FlexLayoutCell>Address</FlexLayoutCell>
+        </Flex>
+        <Box flexGrow={1}>
+          <AutoSizer>
+            {({ width, height }) => (
+              <InfiniteLoader
+                isItemLoaded={isItemLoaded}
+                itemCount={MAX}
+                loadMoreItems={loadMoreItems}
+              >
+                {({ onItemsRendered, ref }) => (
+                  <FixedSizeList
+                    ref={ref}
+                    height={height}
+                    width={width}
+                    itemCount={items.length}
+                    itemSize={40}
+                    itemData={items}
+                    onItemsRendered={onItemsRendered}
+                  >
+                    {Row}
+                  </FixedSizeList>
+                )}
+              </InfiniteLoader>
             )}
-          </Skeleton>
-
-          <Text mt="8">
-            Get started by editing <Text as="code">src/pages/index.tsx</Text>
-          </Text>
-
-          <SimpleGrid spacing={4} columns={[1, 2]} mt={[4, 12, 16]}>
-            <Link href="https://nextjs.org/docs" isExternal>
-              <Heading as="h3">Documentation &rarr;</Heading>
-              <Text>
-                Find in-depth information about Next.js features and API.
-              </Text>
-            </Link>
-
-            <Link href="https://nextjs.org/learn" isExternal>
-              <Heading as="h3">Learn &rarr;</Heading>
-              <Text>
-                Learn about Next.js in an interactive course with quizzes!
-              </Text>
-            </Link>
-
-            <Link
-              href="https://github.com/vercel/next.js/tree/master/examples"
-              isExternal
-            >
-              <Heading as="h3">Examples &rarr;</Heading>
-              <Text>
-                Discover and deploy boilerplate example Next.js projects.
-              </Text>
-            </Link>
-
-            <Link
-              href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-              isExternal
-            >
-              <Heading as="h3">Deploy &rarr;</Heading>
-              <Text>
-                Instantly deploy your Next.js site to a public URL with Vercel.
-              </Text>
-            </Link>
-          </SimpleGrid>
-        </Box>
-
-        <Box
-          as="footer"
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          borderTop="1px"
-          borderTopStyle="solid"
-          borderTopColor="gray.300"
-          py="2"
-        >
-          <Link
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            flexGrow={1}
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            isExternal
-          >
-            Powered by{' '}
-            <Image src="/vercel.svg" alt="Vercel Logo" width={64} height={64} />
-          </Link>
+          </AutoSizer>
         </Box>
       </Container>
     </>
