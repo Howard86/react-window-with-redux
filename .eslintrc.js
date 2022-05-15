@@ -10,6 +10,10 @@ const sharedRules = {
       allow: ['warn', 'error'],
     },
   ],
+  'no-param-reassign': [
+    2,
+    { props: true, ignorePropertyModificationsFor: ['state'] },
+  ],
   'no-restricted-syntax': [
     2,
     'ForInStatement',

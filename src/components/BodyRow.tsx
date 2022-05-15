@@ -6,10 +6,10 @@ import { areEqual } from 'react-window';
 import FlexLayoutCell from './FlexLayoutCell';
 
 import { useColumns } from '@/contexts/column';
-import { FakeData } from '@/services/generator';
+import { Driver } from '@/services/driver';
 
 interface BodyRowProps {
-  data: FakeData[];
+  data: Driver[];
   index: number;
   style: CSSProperties;
 }
@@ -18,18 +18,16 @@ const BodyRow = ({ data, index, style }: BodyRowProps) => {
   const columns = useColumns();
   const item = data[index];
 
-  return (
+  return item ? (
     <Flex style={style}>
-      {columns.map((column) => (
-        <FlexLayoutCell
-          key={column.accessor + item.id}
-          flexWidth={column.flexWidth}
-        >
-          {item[column.accessor]}
+      <FlexLayoutCell flexWidth={10}>{index}</FlexLayoutCell>
+      {columns.map(({ accessor, flexWidth, Cell }) => (
+        <FlexLayoutCell key={accessor + item.id} flexWidth={flexWidth}>
+          {Cell ? <Cell {...item} /> : item[accessor]}
         </FlexLayoutCell>
       ))}
     </Flex>
-  );
+  ) : null;
 };
 
 export default memo(BodyRow, areEqual);

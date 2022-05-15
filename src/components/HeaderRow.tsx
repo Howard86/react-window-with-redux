@@ -9,6 +9,7 @@ const HeaderRow = (props: FlexProps) => {
 
   return (
     <Flex py="2" {...props}>
+      <FlexLayoutCell flexWidth={10}>#</FlexLayoutCell>
       {columns.map((column) => (
         <FlexLayoutCell key={column.accessor} flexWidth={column.flexWidth}>
           {column.header}
