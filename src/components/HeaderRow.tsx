@@ -2,10 +2,10 @@ import { Flex, FlexProps } from '@chakra-ui/react';
 
 import FlexLayoutCell from './FlexLayoutCell';
 
-import { useColumns } from '@/contexts/column';
+import { useTables } from '@/contexts/table';
 
 const HeaderRow = (props: FlexProps) => {
-  const columns = useColumns();
+  const { columns } = useTables();
 
   return (
     <Flex py="2" {...props}>

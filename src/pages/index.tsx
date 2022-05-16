@@ -1,58 +1,91 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { Box, CircularProgress, Container } from '@chakra-ui/react';
 import Head from 'next/head';
 import AutoSizer from 'react-virtualized-auto-sizer';
-import { FixedSizeList } from 'react-window';
+import { VariableSizeList } from 'react-window';
 import InfiniteLoader from 'react-window-infinite-loader';
 
 import BodyRow from '@/components/BodyRow';
+import BooleanCell from '@/components/BooleanCell';
 import DateCell from '@/components/DateCell';
 import HeaderRow from '@/components/HeaderRow';
-import { Column, ColumnContext } from '@/contexts/column';
-import { MAX_API_RETURN_COUNT, selectDriverIds } from '@/redux/driver';
+import { ReactWindowTable, TableContext } from '@/contexts/table';
+import {
+  MAX_API_RETURN_COUNT,
+  selectDriverCities,
+  selectDriverCityState,
+} from '@/redux/driver';
 import { useAppSelector } from '@/redux/store';
 import { useLazyGetDriversQuery } from '@/services/local';
 
-const MAX = 1000;
+const MAX = 100;
+const ROW_HEIGHT = 24;
 const VISIBLE_ROW_COUNT = 5;
 
 const Home = (): JSX.Element => {
-  const driversIds = useAppSelector(selectDriverIds);
-  const [refetch, { isFetching }] = useLazyGetDriversQuery();
+  const listRef = useRef<VariableSizeList | null>(null);
+  const cityState = useAppSelector(selectDriverCityState);
+  const cityDriverIds = useAppSelector(selectDriverCities);
+  const [refetch, { isFetching, isUninitialized }] = useLazyGetDriversQuery();
 
-  const columns = useMemo<Column[]>(
-    () => [
-      { header: 'ID', accessor: 'id', flexWidth: 10 },
-      { header: 'Name', accessor: 'name', flexWidth: 20 },
-      { header: 'Address', accessor: 'address', flexWidth: 50 },
-      {
-        header: 'Available Time',
-        accessor: 'deliveryTime',
-        flexWidth: 20,
-        Cell: DateCell,
-      },
-    ],
+  const table = useMemo<ReactWindowTable>(
+    () => ({
+      ref: listRef,
+      columns: [
+        { header: 'ID', accessor: 'id', flexWidth: 10 },
+        { header: 'Name', accessor: 'name', flexWidth: 20 },
+        { header: 'City', accessor: 'city', flexWidth: 40 },
+        { header: 'Address', accessor: 'address', flexWidth: 50 },
+        {
+          header: 'Delivery',
+          accessor: 'deliveryTime',
+          flexWidth: 10,
+          Cell: DateCell,
+        },
+        {
+          header: 'Available',
+          accessor: 'status',
+          flexWidth: 5,
+          Cell: BooleanCell,
+        },
+      ],
+    }),
     [],
   );
 
   const isItemLoaded = useCallback(
-    (index: number) => index <= driversIds.length,
-    [driversIds.length],
+    (index: number) => index <= cityState.ids.length,
+    [cityState.ids.length],
   );
 
   const loadMoreItems = useCallback(
     async (_startIndex: number, endIndex: number) => {
       if (
-        driversIds.length >= MAX ||
-        driversIds.length - endIndex >= VISIBLE_ROW_COUNT
+        cityState.ids.length >= MAX ||
+        cityState.ids.length - endIndex >= VISIBLE_ROW_COUNT
       )
         return;
 
-      refetch(Math.min(MAX_API_RETURN_COUNT, MAX - driversIds.length));
+      refetch(Math.min(MAX_API_RETURN_COUNT, MAX - cityState.ids.length));
     },
-    [driversIds.length, refetch],
+    [cityState.ids.length, refetch],
   );
+
+  const getItemSize = useCallback(
+    (index: number) => {
+      const city = cityState.entities[cityState.ids[index]];
+
+      return ROW_HEIGHT * (city.expanded ? city.driverIds.length : 1);
+    },
+    [cityState],
+  );
+
+  useEffect(() => {
+    if (isUninitialized) {
+      refetch(MAX_API_RETURN_COUNT);
+    }
+  }, [isUninitialized, refetch]);
 
   return (
     <>
@@ -60,7 +93,7 @@ const Home = (): JSX.Element => {
         <title>Create Next App</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <ColumnContext.Provider value={columns}>
+      <TableContext.Provider value={table}>
         <Container
           display="flex"
           position="relative"
@@ -78,17 +111,20 @@ const Home = (): JSX.Element => {
                   loadMoreItems={loadMoreItems}
                 >
                   {({ onItemsRendered, ref }) => (
-                    <FixedSizeList
-                      ref={ref}
+                    <VariableSizeList
+                      ref={(list) => {
+                        ref(list);
+                        listRef.current = list;
+                      }}
                       height={height}
                       width={width}
-                      itemCount={driversIds.length}
-                      itemSize={40}
-                      itemData={driversIds}
+                      itemCount={cityDriverIds.length}
+                      itemSize={getItemSize}
+                      itemData={cityDriverIds}
                       onItemsRendered={onItemsRendered}
                     >
                       {BodyRow}
-                    </FixedSizeList>
+                    </VariableSizeList>
                   )}
                 </InfiniteLoader>
               )}
@@ -98,7 +134,7 @@ const Home = (): JSX.Element => {
             {isFetching && <CircularProgress isIndeterminate />}
           </Box>
         </Container>
-      </ColumnContext.Provider>
+      </TableContext.Provider>
     </>
   );
 };

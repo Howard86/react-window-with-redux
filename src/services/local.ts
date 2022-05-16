@@ -13,7 +13,7 @@ export const localApi = createApi({
     getName: builder.query<Local.HelloApi, void>({ query: () => 'hello' }),
     getDrivers: builder.query<Driver[], number>({
       queryFn: async (count) => {
-        await sleep(2);
+        await sleep(1);
         return { data: generateDrivers(count) };
       },
     }),

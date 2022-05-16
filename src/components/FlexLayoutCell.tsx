@@ -5,7 +5,7 @@ interface FlexLayoutCellProps extends BoxProps {
 }
 
 const FlexLayoutCell = ({ flexWidth = 50, ...props }: FlexLayoutCellProps) => (
-  <Box flexBasis={flexWidth} flexGrow={flexWidth} {...props} />
+  <Box noOfLines={1} flexBasis={flexWidth} flexGrow={flexWidth} {...props} />
 );
 
 export default FlexLayoutCell;
