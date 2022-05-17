@@ -1,20 +1,18 @@
-import { CSSProperties, memo } from 'react';
+import { CSSProperties, memo, useCallback } from 'react';
 
 import { Box, Flex } from '@chakra-ui/react';
+import { EntityId } from '@reduxjs/toolkit';
+import get from 'lodash.get';
 import { areEqual } from 'react-window';
 
 import FlexLayoutCell from './FlexLayoutCell';
 
 import { useTables } from '@/contexts/table';
-import {
-  CityState,
-  selectDriverEntities,
-  toggleExpanded,
-} from '@/redux/driver';
+import { citySelector, driverSelector, toggleExpanded } from '@/redux/driver';
 import { useAppDispatch, useAppSelector } from '@/redux/store';
 
 interface BodyRowProps {
-  data: CityState[];
+  data: EntityId[];
   index: number;
   style: CSSProperties;
 }
@@ -22,67 +20,50 @@ interface BodyRowProps {
 const BodyRow = ({ data, index, style }: BodyRowProps) => {
   const dispatch = useAppDispatch();
   const { columns, ref } = useTables();
-  const driverEntities = useAppSelector(selectDriverEntities);
-  const cityState = data[index];
+  const driverEntities = useAppSelector(driverSelector.selectEntities);
+  const cityEntities = useAppSelector(citySelector.selectEntities);
 
-  const handleExpand = () => {
-    dispatch(toggleExpanded(cityState.id));
-    if (ref.current) {
-      ref.current.resetAfterIndex(index);
-    }
-  };
+  const city = cityEntities[data[index]];
 
-  if (cityState.driverIds.length === 0) return null;
+  const handleExpand = useCallback(() => {
+    if (!ref.current || !city || city.driverIds.length <= 1) return;
 
-  const firstItem = driverEntities[cityState.driverIds[0]];
+    dispatch(toggleExpanded(city.name));
+    ref.current.resetAfterIndex(index);
+  }, [city, dispatch, index, ref]);
 
-  if (!firstItem) return null;
-
-  if (cityState.driverIds.length === 1)
-    return (
-      <Flex style={style}>
-        <FlexLayoutCell flexWidth={10}>
-          {index} ({cityState.driverIds.length})
-        </FlexLayoutCell>
-        {columns.map(({ accessor, flexWidth, Cell }) => (
-          <FlexLayoutCell key={accessor + firstItem.id} flexWidth={flexWidth}>
-            {Cell ? <Cell {...firstItem} /> : firstItem[accessor]}
-          </FlexLayoutCell>
-        ))}
-      </Flex>
-    );
+  if (!city) return null;
 
   return (
     <Box style={style}>
-      <Flex
-        bg={cityState.expanded ? 'gray.100' : 'white'}
-        onClick={handleExpand}
-      >
+      <Flex bg={city.expanded ? 'purple.100' : 'white'} onClick={handleExpand}>
         <FlexLayoutCell flexWidth={10}>
-          {index} ({cityState.driverIds.length})
+          {index} ({city.driverIds.length})
         </FlexLayoutCell>
-        {columns.map(({ accessor, flexWidth, Cell }) => (
-          <FlexLayoutCell key={accessor + firstItem.id} flexWidth={flexWidth}>
-            {Cell ? <Cell {...firstItem} /> : firstItem[accessor]}
+        {columns.map(({ cityAccessor: accessor, flexWidth, Cell }) => (
+          <FlexLayoutCell key={accessor + city.name} flexWidth={flexWidth}>
+            {Cell ? <Cell id={city.primaryDriver.id} /> : get(city, accessor)}
           </FlexLayoutCell>
         ))}
       </Flex>
-      {cityState.driverIds.slice(1).map((driverId) => {
-        const item = driverEntities[driverId];
+      {city.expanded &&
+        city.driverIds.map((driverId) => {
+          const item = driverEntities[driverId];
 
-        if (!item || !cityState.expanded) return null;
-
-        return (
-          <Flex bg="gray.100" key={driverId}>
-            <FlexLayoutCell flexWidth={10}>{index}</FlexLayoutCell>
-            {columns.map(({ accessor, flexWidth, Cell }) => (
-              <FlexLayoutCell key={accessor + item.id} flexWidth={flexWidth}>
-                {Cell ? <Cell {...item} /> : item[accessor]}
-              </FlexLayoutCell>
-            ))}
-          </Flex>
-        );
-      })}
+          return (
+            <Flex key={driverId} bg="gray.100">
+              <FlexLayoutCell flexWidth={10} />
+              {columns.map(({ driverAccessor, flexWidth, Cell }) => (
+                <FlexLayoutCell
+                  key={driverAccessor + driverId}
+                  flexWidth={flexWidth}
+                >
+                  {Cell ? <Cell id={driverId} /> : get(item, driverAccessor)}
+                </FlexLayoutCell>
+              ))}
+            </Flex>
+          );
+        })}
     </Box>
   );
 };

@@ -11,7 +11,7 @@ const HeaderRow = (props: FlexProps) => {
     <Flex py="2" {...props}>
       <FlexLayoutCell flexWidth={10}>#</FlexLayoutCell>
       {columns.map((column) => (
-        <FlexLayoutCell key={column.accessor} flexWidth={column.flexWidth}>
+        <FlexLayoutCell key={column.cityAccessor} flexWidth={column.flexWidth}>
           {column.header}
         </FlexLayoutCell>
       ))}

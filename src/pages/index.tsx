@@ -11,11 +11,7 @@ import BooleanCell from '@/components/BooleanCell';
 import DateCell from '@/components/DateCell';
 import HeaderRow from '@/components/HeaderRow';
 import { ReactWindowTable, TableContext } from '@/contexts/table';
-import {
-  MAX_API_RETURN_COUNT,
-  selectDriverCities,
-  selectDriverCityState,
-} from '@/redux/driver';
+import { citySelector, MAX_API_RETURN_COUNT } from '@/redux/driver';
 import { useAppSelector } from '@/redux/store';
 import { useLazyGetDriversQuery } from '@/services/local';
 
@@ -25,27 +21,49 @@ const VISIBLE_ROW_COUNT = 5;
 
 const Home = (): JSX.Element => {
   const listRef = useRef<VariableSizeList | null>(null);
-  const cityState = useAppSelector(selectDriverCityState);
-  const cityDriverIds = useAppSelector(selectDriverCities);
+  const cityEntity = useAppSelector(citySelector.selectEntities);
+  const cityIds = useAppSelector(citySelector.selectIds);
   const [refetch, { isFetching, isUninitialized }] = useLazyGetDriversQuery();
 
   const table = useMemo<ReactWindowTable>(
     () => ({
       ref: listRef,
       columns: [
-        { header: 'ID', accessor: 'id', flexWidth: 10 },
-        { header: 'Name', accessor: 'name', flexWidth: 20 },
-        { header: 'City', accessor: 'city', flexWidth: 40 },
-        { header: 'Address', accessor: 'address', flexWidth: 50 },
+        {
+          header: 'ID',
+          cityAccessor: 'primaryDriver.id',
+          driverAccessor: 'id',
+          flexWidth: 10,
+        },
+        {
+          header: 'Name',
+          cityAccessor: 'primaryDriver.name',
+          driverAccessor: 'name',
+          flexWidth: 20,
+        },
+        {
+          header: 'City',
+          cityAccessor: 'name',
+          driverAccessor: 'city',
+          flexWidth: 40,
+        },
+        {
+          header: 'Address',
+          cityAccessor: 'primaryDriver.address',
+          driverAccessor: 'address',
+          flexWidth: 50,
+        },
         {
           header: 'Delivery',
-          accessor: 'deliveryTime',
+          cityAccessor: 'primaryDriver.deliveryTime',
+          driverAccessor: 'deliveryTime',
           flexWidth: 10,
           Cell: DateCell,
         },
         {
           header: 'Available',
-          accessor: 'status',
+          cityAccessor: 'primaryDriver.status',
+          driverAccessor: 'status',
           flexWidth: 5,
           Cell: BooleanCell,
         },
@@ -55,30 +73,32 @@ const Home = (): JSX.Element => {
   );
 
   const isItemLoaded = useCallback(
-    (index: number) => index <= cityState.ids.length,
-    [cityState.ids.length],
+    (index: number) => index <= cityIds.length,
+    [cityIds.length],
   );
 
   const loadMoreItems = useCallback(
     async (_startIndex: number, endIndex: number) => {
       if (
-        cityState.ids.length >= MAX ||
-        cityState.ids.length - endIndex >= VISIBLE_ROW_COUNT
+        cityIds.length >= MAX ||
+        cityIds.length - endIndex >= VISIBLE_ROW_COUNT
       )
         return;
 
-      refetch(Math.min(MAX_API_RETURN_COUNT, MAX - cityState.ids.length));
+      refetch(Math.min(MAX_API_RETURN_COUNT, MAX - cityIds.length));
     },
-    [cityState.ids.length, refetch],
+    [cityIds.length, refetch],
   );
 
   const getItemSize = useCallback(
     (index: number) => {
-      const city = cityState.entities[cityState.ids[index]];
+      const city = cityEntity[cityIds[index]];
 
-      return ROW_HEIGHT * (city.expanded ? city.driverIds.length : 1);
+      return city?.expanded
+        ? ROW_HEIGHT * (city.driverIds.length + 1)
+        : ROW_HEIGHT;
     },
-    [cityState],
+    [cityEntity, cityIds],
   );
 
   useEffect(() => {
@@ -99,7 +119,7 @@ const Home = (): JSX.Element => {
           position="relative"
           flexDir="column"
           h="full"
-          maxWidth="container.lg"
+          maxWidth="container.xl"
         >
           <HeaderRow />
           <Box flexGrow={1}>
@@ -118,9 +138,9 @@ const Home = (): JSX.Element => {
                       }}
                       height={height}
                       width={width}
-                      itemCount={cityDriverIds.length}
+                      itemCount={cityIds.length}
                       itemSize={getItemSize}
-                      itemData={cityDriverIds}
+                      itemData={cityIds}
                       onItemsRendered={onItemsRendered}
                     >
                       {BodyRow}

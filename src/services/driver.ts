@@ -3,6 +3,7 @@ import {
   randBoolean,
   randCity,
   randFullName,
+  randNumber,
   randStreetAddress,
   randUuid,
   seed,
@@ -12,13 +13,19 @@ import dayjs from 'dayjs';
 export type Driver = {
   id: string;
   name: string;
-  city: string;
+  city: City;
   address: string;
   deliveryTime: number;
   status: boolean;
 };
 
-seed('FIXED_SEED');
+export type City = {
+  name: string;
+  price: number;
+  pickUpLocations: string[];
+};
+
+seed('FIXED_SEED_RANDOM_CODE');
 
 export const generateDrivers = (length: number): Driver[] => {
   const today = dayjs();
@@ -28,7 +35,13 @@ export const generateDrivers = (length: number): Driver[] => {
     .map(() => ({
       id: randUuid().slice(0, 6),
       name: randFullName(),
-      city: randCity(),
+      city: {
+        name: randCity(),
+        price: randNumber({ min: 0, max: 100 }),
+        pickUpLocations: randStreetAddress({
+          length: randNumber({ min: 1, max: 5 }),
+        }),
+      },
       address: randStreetAddress(),
       deliveryTime: randBetweenDate({
         from: today.startOf('day').toDate(),
