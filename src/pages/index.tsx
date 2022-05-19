@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { Box, CircularProgress, Container } from '@chakra-ui/react';
+import { DownloadIcon } from '@chakra-ui/icons';
+import {
+  Box,
+  CircularProgress,
+  Container,
+  Flex,
+  IconButton,
+  Text,
+} from '@chakra-ui/react';
 import Head from 'next/head';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { VariableSizeList } from 'react-window';
@@ -11,7 +19,11 @@ import BooleanCell from '@/components/BooleanCell';
 import DateCell from '@/components/DateCell';
 import HeaderRow from '@/components/HeaderRow';
 import { ReactWindowTable, TableContext } from '@/contexts/table';
-import { citySelector, MAX_API_RETURN_COUNT } from '@/redux/driver';
+import {
+  citySelector,
+  driverSelector,
+  MAX_API_RETURN_COUNT,
+} from '@/redux/driver';
 import { useAppSelector } from '@/redux/store';
 import { useLazyGetDriversQuery } from '@/services/local';
 
@@ -23,6 +35,7 @@ const Home = (): JSX.Element => {
   const listRef = useRef<VariableSizeList | null>(null);
   const cityEntity = useAppSelector(citySelector.selectEntities);
   const cityIds = useAppSelector(citySelector.selectIds);
+  const driverCount = useAppSelector(driverSelector.selectTotal);
   const [refetch, { isFetching, isUninitialized }] = useLazyGetDriversQuery();
 
   const table = useMemo<ReactWindowTable>(
@@ -72,22 +85,22 @@ const Home = (): JSX.Element => {
     [],
   );
 
+  const fetchMoreDrivers = useCallback(() => {
+    refetch(Math.min(MAX_API_RETURN_COUNT, MAX - cityIds.length));
+  }, [cityIds.length, refetch]);
+
   const isItemLoaded = useCallback(
-    (index: number) => index <= cityIds.length,
+    (index: number) => cityIds.length >= MAX || index <= cityIds.length,
     [cityIds.length],
   );
 
   const loadMoreItems = useCallback(
     async (_startIndex: number, endIndex: number) => {
-      if (
-        cityIds.length >= MAX ||
-        cityIds.length - endIndex >= VISIBLE_ROW_COUNT
-      )
-        return;
+      if (cityIds.length - endIndex >= VISIBLE_ROW_COUNT) return;
 
-      refetch(Math.min(MAX_API_RETURN_COUNT, MAX - cityIds.length));
+      fetchMoreDrivers();
     },
-    [cityIds.length, refetch],
+    [cityIds.length, fetchMoreDrivers],
   );
 
   const getItemSize = useCallback(
@@ -150,6 +163,19 @@ const Home = (): JSX.Element => {
               )}
             </AutoSizer>
           </Box>
+          <Flex alignItems="center" justify="flex-end" p="4" gap="2">
+            <Text as="caption">
+              {cityIds.length} cities - {driverCount} drivers
+            </Text>
+            <IconButton
+              variant="ghost"
+              rounded="full"
+              aria-label="fetch more drivers"
+              onClick={fetchMoreDrivers}
+            >
+              <DownloadIcon />
+            </IconButton>
+          </Flex>
           <Box position="absolute" bottom="6" right="10">
             {isFetching && <CircularProgress isIndeterminate />}
           </Box>
