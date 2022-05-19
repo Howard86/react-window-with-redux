@@ -1,10 +1,10 @@
 import { CheckCircleIcon, WarningIcon } from '@chakra-ui/icons';
-import { EntityId } from '@reduxjs/toolkit';
 
+import { CellProps } from '@/contexts/table';
 import { driverSelector } from '@/redux/driver';
 import { useAppSelector } from '@/redux/store';
 
-const BooleanCell = ({ id }: { id: EntityId }) => {
+const BooleanCell = ({ id }: CellProps) => {
   const item = useAppSelector(driverSelector.selectEntities)[id];
 
   return item?.status ? (

@@ -64,7 +64,11 @@ export interface Column {
   cityAccessor: Leaves<CityEntity>;
   driverAccessor: Leaves<DriverEntity>;
   flexWidth?: number;
-  Cell?: FC<{ id: EntityId }>;
+  Cell?: FC<CellProps>;
+}
+
+export interface CellProps {
+  id: EntityId;
 }
 
 export const TableContext = createContext<ReactWindowTable>(

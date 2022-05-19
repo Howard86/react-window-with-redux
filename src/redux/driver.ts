@@ -83,10 +83,12 @@ export const driverSlice = createSlice({
   initialState,
   reducers: {
     toggleExpanded: (state, action: PayloadAction<string>) => {
-      if (state.cityEntity.entities[action.payload]) {
-        state.cityEntity.entities[action.payload]!.expanded =
-          !state.cityEntity.entities[action.payload]?.expanded;
-      }
+      cityAdapter.updateOne(state.cityEntity, {
+        id: action.payload,
+        changes: {
+          expanded: !state.cityEntity.entities[action.payload]?.expanded,
+        },
+      });
     },
   },
   extraReducers: (builder) => {

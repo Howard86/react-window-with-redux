@@ -1,11 +1,11 @@
-import { EntityId } from '@reduxjs/toolkit';
 import dayjs from 'dayjs';
 
+import { CellProps } from '@/contexts/table';
 import { driverSelector } from '@/redux/driver';
 import { useAppSelector } from '@/redux/store';
 
-const DateCell = ({ id }: { id: EntityId }) => {
-  const item = useAppSelector(driverSelector.selectEntities)[id];
+const DateCell = ({ id }: CellProps) => {
+  const item = useAppSelector((state) => driverSelector.selectById(state, id));
 
   if (!item) return null;
 

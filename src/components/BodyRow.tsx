@@ -21,9 +21,9 @@ const BodyRow = ({ data, index, style }: BodyRowProps) => {
   const dispatch = useAppDispatch();
   const { columns, ref } = useTables();
   const driverEntities = useAppSelector(driverSelector.selectEntities);
-  const cityEntities = useAppSelector(citySelector.selectEntities);
-
-  const city = cityEntities[data[index]];
+  const city = useAppSelector((state) =>
+    citySelector.selectById(state, data[index]),
+  );
 
   const handleExpand = useCallback(() => {
     if (!ref.current || !city || city.driverIds.length <= 1) return;
