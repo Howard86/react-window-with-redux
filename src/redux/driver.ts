@@ -121,10 +121,8 @@ export const driverSlice = createSlice({
                   existedCity.primaryDriver.deliveryTime
                     ? incomingCity.primaryDriver
                     : existedCity.primaryDriver,
-                driverIds: existedCity.driverIds.concat(
-                  incomingCity.driverIds.filter(
-                    (id) => state.driverEntity.entities[id],
-                  ),
+                driverIds: Array.from(
+                  new Set(existedCity.driverIds.concat(incomingCity.driverIds)),
                 ),
               },
             });
