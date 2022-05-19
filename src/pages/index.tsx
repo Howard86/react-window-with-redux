@@ -1,20 +1,124 @@
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+
+import { DownloadIcon } from '@chakra-ui/icons';
 import {
   Box,
+  CircularProgress,
   Container,
-  Heading,
-  Link,
-  SimpleGrid,
-  Skeleton,
+  Flex,
+  IconButton,
   Text,
 } from '@chakra-ui/react';
 import Head from 'next/head';
+import AutoSizer from 'react-virtualized-auto-sizer';
+import { VariableSizeList } from 'react-window';
+import InfiniteLoader from 'react-window-infinite-loader';
 
-import Image from '@/components/Image';
-import RouteLink from '@/components/RouteLink';
-import { useGetNameQuery } from '@/services/local';
+import BodyRow from '@/components/BodyRow';
+import BooleanCell from '@/components/BooleanCell';
+import DateCell from '@/components/DateCell';
+import HeaderRow from '@/components/HeaderRow';
+import { ReactWindowTable, TableContext } from '@/contexts/table';
+import {
+  citySelector,
+  driverSelector,
+  MAX_API_RETURN_COUNT,
+} from '@/redux/driver';
+import { useAppSelector } from '@/redux/store';
+import { useLazyGetDriversQuery } from '@/services/local';
+
+const MAX = 100;
+const ROW_HEIGHT = 24;
+const VISIBLE_ROW_COUNT = 5;
 
 const Home = (): JSX.Element => {
-  const { data, isSuccess, fulfilledTimeStamp } = useGetNameQuery();
+  const listRef = useRef<VariableSizeList | null>(null);
+  const cityEntity = useAppSelector(citySelector.selectEntities);
+  const cityIds = useAppSelector(citySelector.selectIds);
+  const driverCount = useAppSelector(driverSelector.selectTotal);
+  const [refetch, { isFetching, isUninitialized }] = useLazyGetDriversQuery();
+
+  const table = useMemo<ReactWindowTable>(
+    () => ({
+      ref: listRef,
+      columns: [
+        {
+          header: 'ID',
+          cityAccessor: 'primaryDriver.id',
+          driverAccessor: 'id',
+          flexWidth: 10,
+        },
+        {
+          header: 'Name',
+          cityAccessor: 'primaryDriver.name',
+          driverAccessor: 'name',
+          flexWidth: 20,
+        },
+        {
+          header: 'City',
+          cityAccessor: 'name',
+          driverAccessor: 'city',
+          flexWidth: 40,
+        },
+        {
+          header: 'Address',
+          cityAccessor: 'primaryDriver.address',
+          driverAccessor: 'address',
+          flexWidth: 50,
+        },
+        {
+          header: 'Delivery',
+          cityAccessor: 'primaryDriver.deliveryTime',
+          driverAccessor: 'deliveryTime',
+          flexWidth: 10,
+          Cell: DateCell,
+        },
+        {
+          header: 'Available',
+          cityAccessor: 'primaryDriver.status',
+          driverAccessor: 'status',
+          flexWidth: 5,
+          Cell: BooleanCell,
+        },
+      ],
+    }),
+    [],
+  );
+
+  const fetchMoreDrivers = useCallback(() => {
+    refetch(Math.min(MAX_API_RETURN_COUNT, MAX - cityIds.length));
+  }, [cityIds.length, refetch]);
+
+  const isItemLoaded = useCallback(
+    (index: number) => cityIds.length >= MAX || index <= cityIds.length,
+    [cityIds.length],
+  );
+
+  const loadMoreItems = useCallback(
+    async (_startIndex: number, endIndex: number) => {
+      if (cityIds.length - endIndex >= VISIBLE_ROW_COUNT) return;
+
+      fetchMoreDrivers();
+    },
+    [cityIds.length, fetchMoreDrivers],
+  );
+
+  const getItemSize = useCallback(
+    (index: number) => {
+      const city = cityEntity[cityIds[index]];
+
+      return city?.expanded
+        ? ROW_HEIGHT * (city.driverIds.length + 1)
+        : ROW_HEIGHT;
+    },
+    [cityEntity, cityIds],
+  );
+
+  useEffect(() => {
+    if (isUninitialized) {
+      refetch(MAX_API_RETURN_COUNT);
+    }
+  }, [isUninitialized, refetch]);
 
   return (
     <>
@@ -22,103 +126,61 @@ const Home = (): JSX.Element => {
         <title>Create Next App</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <Container
-        display="flex"
-        flexDir="column"
-        h="full"
-        maxWidth="container.lg"
-      >
-        <Box
-          as="main"
-          py="8"
+      <TableContext.Provider value={table}>
+        <Container
           display="flex"
+          position="relative"
           flexDir="column"
-          alignItems="center"
-          flex={1}
+          h="full"
+          maxWidth="container.xl"
         >
-          <Heading as="h1">
-            Welcome to{' '}
-            <Link href="https://nextjs.org" isExternal>
-              Next.js!
-            </Link>
-          </Heading>
-          <Text fontWeight="semibold" fontSize="lg">
-            Go to <RouteLink href="/new-page">New Page</RouteLink>
-          </Text>
-
-          <Skeleton isLoaded={isSuccess}>
-            {data && fulfilledTimeStamp && (
-              <Text>
-                Local API <Text as="code">/hello</Text> processed within{' '}
-                {fulfilledTimeStamp - data.timestamp}ms
-              </Text>
-            )}
-          </Skeleton>
-
-          <Text mt="8">
-            Get started by editing <Text as="code">src/pages/index.tsx</Text>
-          </Text>
-
-          <SimpleGrid spacing={4} columns={[1, 2]} mt={[4, 12, 16]}>
-            <Link href="https://nextjs.org/docs" isExternal>
-              <Heading as="h3">Documentation &rarr;</Heading>
-              <Text>
-                Find in-depth information about Next.js features and API.
-              </Text>
-            </Link>
-
-            <Link href="https://nextjs.org/learn" isExternal>
-              <Heading as="h3">Learn &rarr;</Heading>
-              <Text>
-                Learn about Next.js in an interactive course with quizzes!
-              </Text>
-            </Link>
-
-            <Link
-              href="https://github.com/vercel/next.js/tree/master/examples"
-              isExternal
+          <HeaderRow />
+          <Box flexGrow={1}>
+            <AutoSizer>
+              {({ width, height }) => (
+                <InfiniteLoader
+                  isItemLoaded={isItemLoaded}
+                  itemCount={MAX}
+                  loadMoreItems={loadMoreItems}
+                >
+                  {({ onItemsRendered, ref }) => (
+                    <VariableSizeList
+                      ref={(list) => {
+                        ref(list);
+                        listRef.current = list;
+                      }}
+                      height={height}
+                      width={width}
+                      itemCount={cityIds.length}
+                      itemSize={getItemSize}
+                      itemData={cityIds}
+                      onItemsRendered={onItemsRendered}
+                    >
+                      {BodyRow}
+                    </VariableSizeList>
+                  )}
+                </InfiniteLoader>
+              )}
+            </AutoSizer>
+          </Box>
+          <Flex alignItems="center" justify="flex-end" p="4" gap="2">
+            <Text as="caption">
+              {cityIds.length} cities - {driverCount} drivers
+            </Text>
+            <IconButton
+              variant="ghost"
+              rounded="full"
+              aria-label="fetch more drivers"
+              onClick={fetchMoreDrivers}
             >
-              <Heading as="h3">Examples &rarr;</Heading>
-              <Text>
-                Discover and deploy boilerplate example Next.js projects.
-              </Text>
-            </Link>
-
-            <Link
-              href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-              isExternal
-            >
-              <Heading as="h3">Deploy &rarr;</Heading>
-              <Text>
-                Instantly deploy your Next.js site to a public URL with Vercel.
-              </Text>
-            </Link>
-          </SimpleGrid>
-        </Box>
-
-        <Box
-          as="footer"
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          borderTop="1px"
-          borderTopStyle="solid"
-          borderTopColor="gray.300"
-          py="2"
-        >
-          <Link
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            flexGrow={1}
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            isExternal
-          >
-            Powered by{' '}
-            <Image src="/vercel.svg" alt="Vercel Logo" width={64} height={64} />
-          </Link>
-        </Box>
-      </Container>
+              <DownloadIcon />
+            </IconButton>
+          </Flex>
+          <Box position="absolute" bottom="6" right="10">
+            {isFetching && <CircularProgress isIndeterminate />}
+          </Box>
+        </Container>
+      </TableContext.Provider>
     </>
   );
 };
